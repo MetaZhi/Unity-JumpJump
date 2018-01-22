@@ -210,6 +210,8 @@ public class Player : MonoBehaviour
                 scores.Add(score);
             }
 
+            Debug.Log("before MainThreadDispatcher");
+
             MainThreadDispatcher.Send(_ =>
             {
                 foreach (var score in scores)
