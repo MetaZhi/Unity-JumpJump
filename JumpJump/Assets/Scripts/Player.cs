@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
+using LeanCloud;
+using UniRx;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -22,6 +24,15 @@ public class Player : MonoBehaviour
     public Transform Body;
 
     public Text SingleScoreText;
+
+    public GameObject SaveScorePanel;
+    public InputField NameField;
+    public Button SaveButton;
+
+    public GameObject RankPanel;
+    public GameObject RankItem;
+
+    public Button RestartButton;
 
     private Rigidbody _rigidbody;
     private float _startTime;
@@ -45,6 +56,14 @@ public class Player : MonoBehaviour
         SpawnStage();
 
         _cameraRelativePosition = Camera.position - transform.position;
+
+        SaveButton.onClick.AddListener(OnClickSaveButton);
+        RestartButton.onClick.AddListener(() =>
+        {
+            SceneManager.LoadScene(0);
+        });
+
+        MainThreadDispatcher.Initialize();
     }
 
     // Update is called once per frame
@@ -120,8 +139,8 @@ public class Player : MonoBehaviour
 
         if (collision.gameObject.name == "Ground")
         {
-            //本局游戏结束，重新开始
-            SceneManager.LoadScene(0);
+            //本局游戏结束，显示上传分数panel
+            SaveScorePanel.SetActive(true);
         }
     }
 
@@ -161,5 +180,48 @@ public class Player : MonoBehaviour
     void MoveCamera()
     {
         Camera.DOMove(transform.position + _cameraRelativePosition, 1);
+    }
+
+    void OnClickSaveButton()
+    {
+        var nickname = NameField.text;
+
+        AVObject gameScore = new AVObject("GameScore");
+        gameScore["score"] = _score;
+        gameScore["playerName"] = nickname;
+        gameScore.SaveAsync().ContinueWith(_ =>
+        {
+            ShowRankPanel();
+        });
+        SaveScorePanel.SetActive(false);
+    }
+
+    void ShowRankPanel()
+    {
+        AVQuery<AVObject> query = new AVQuery<AVObject>("GameScore").OrderByDescending("score").Limit(10);
+        query.FindAsync().ContinueWith(t =>
+        {
+            var results = t.Result;
+            var scores = new List<string>();
+
+            foreach (var result in results)
+            {
+                var score = result["playerName"] + ":" + result["score"];
+                scores.Add(score);
+            }
+
+            MainThreadDispatcher.Send(_ =>
+            {
+                foreach (var score in scores)
+                {
+                    var item = Instantiate(RankItem);
+                    item.SetActive(true);
+                    item.GetComponent<Text>().text = score;
+                    item.transform.SetParent(RankItem.transform.parent);
+
+                }
+                RankPanel.SetActive(true);
+            }, null);
+        });
     }
 }
