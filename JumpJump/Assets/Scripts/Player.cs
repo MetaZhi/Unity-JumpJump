@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using LeanCloud;
 using UniRx;
@@ -6,6 +7,7 @@ using UniRx.Toolkit;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 public class Player : MonoBehaviour
 {
@@ -45,8 +47,11 @@ public class Player : MonoBehaviour
     // 排行榜面板
     public GameObject RankPanel;
 
-    // 排行数据的一条Text
-    public GameObject RankItem;
+    // 排行数据的姓名
+    public GameObject RankName;
+
+    // 排行数据的分数
+    public GameObject RankScore;
 
     // 重新开始按钮
     public Button RestartButton;
@@ -249,14 +254,7 @@ public class Player : MonoBehaviour
     void RandomDirection()
     {
         var seed = Random.Range(0, 2);
-        if (seed == 0)
-        {
-            _direction = new Vector3(1, 0, 0);
-        }
-        else
-        {
-            _direction = new Vector3(0, 0, 1);
-        }
+        _direction = seed == 0 ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1);
     }
 
     /// <summary>
@@ -292,29 +290,35 @@ public class Player : MonoBehaviour
     /// </summary>
     void ShowRankPanel()
     {
+        Debug.Log("ShowRankPanel");
         //获取GameScore数据对象，降序排列取前10个数据
         AVQuery<AVObject> query = new AVQuery<AVObject>("GameScore").OrderByDescending("score").Limit(10);
         query.FindAsync().ContinueWith(t =>
         {
             var results = t.Result;
-            var scores = new List<string>();
+            var scores = new List<KeyValuePair<string, string>>();
 
             //将数据转化为字符串
             foreach (var result in results)
             {
-                var score = result["playerName"] + ":" + result["score"];
-                scores.Add(score);
+                scores.Add(new KeyValuePair<string, string>(result["playerName"].ToString(), result["score"].ToString()));
             }
 
             //由于当前是在子线程，对Unity中的物体操作需要在主线程操作，用以下方法转到主线程
             MainThreadDispatcher.Send(_ =>
             {
+                Debug.Log(scores.Count);
                 foreach (var score in scores)
                 {
-                    var item = Instantiate(RankItem);
+                    var item = Instantiate(RankName);
                     item.SetActive(true);
-                    item.GetComponent<Text>().text = score;
-                    item.transform.SetParent(RankItem.transform.parent);
+                    item.GetComponent<Text>().text = score.Key;
+                    item.transform.SetParent(RankName.transform.parent);
+
+                    item = Instantiate(RankScore);
+                    item.SetActive(true);
+                    item.GetComponent<Text>().text = score.Value;
+                    item.transform.SetParent(RankScore.transform.parent);
                 }
                 RankPanel.SetActive(true);
             }, null);
