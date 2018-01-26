@@ -1,13 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using DG.Tweening;
-using LeanCloud;
 using UniRx;
 using UniRx.Toolkit;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
+
+[Serializable]
+class GameScore
+{
+    public int score;
+    public string playerName;
+}
+
+class QueryRankResult
+{
+    public List<GameScore> results;
+}
 
 public class Player : MonoBehaviour
 {
@@ -56,6 +67,9 @@ public class Player : MonoBehaviour
     // 重新开始按钮
     public Button RestartButton;
 
+    public string LeanCloudAppId;
+    public string LeanCloudAppKey;
+
     private Rigidbody _rigidbody;
     private float _startTime;
     private GameObject _currentStage;
@@ -66,6 +80,7 @@ public class Player : MonoBehaviour
     Vector3 _direction = new Vector3(1, 0, 0);
     private float _scoreAnimationStartTime;
     private int _lastReward = 1;
+    private LeanCloudRestAPI _leanCloud;
 
     // Use this for initialization
     void Start()
@@ -82,6 +97,8 @@ public class Player : MonoBehaviour
         RestartButton.onClick.AddListener(() => { SceneManager.LoadScene(0); });
 
         MainThreadDispatcher.Initialize();
+
+        _leanCloud = new LeanCloudRestAPI(LeanCloudAppId, LeanCloudAppKey);
     }
 
     // Update is called once per frame
@@ -209,9 +226,6 @@ public class Player : MonoBehaviour
 
     private void OnGameOver()
     {
-#if UNITY_WEBGL
-        SceneManager.LoadScene(0);
-#else
         if (_score > 0)
         {
             //本局游戏结束，如果得分大于0，显示上传分数panel
@@ -222,7 +236,6 @@ public class Player : MonoBehaviour
             //否则直接显示排行榜
             ShowRankPanel();
         }
-#endif
     }
 
     /// <summary>
@@ -280,12 +293,12 @@ public class Player : MonoBehaviour
             return;
 
         //创建一个GameScore分数对象
-        AVObject gameScore = new AVObject("GameScore");
-        gameScore["score"] = _score;
-        gameScore["playerName"] = nickname;
+        GameScore gameScore = new GameScore();
+        gameScore.score = _score;
+        gameScore.playerName = nickname;
 
         //异步保存
-        gameScore.SaveAsync().ContinueWith(_ => { ShowRankPanel(); });
+        StartCoroutine(_leanCloud.Create("GameScore", JsonUtility.ToJson(gameScore, false), ShowRankPanel));
         SaveScorePanel.SetActive(false);
     }
 
@@ -296,36 +309,35 @@ public class Player : MonoBehaviour
     {
         Debug.Log("ShowRankPanel");
         //获取GameScore数据对象，降序排列取前10个数据
-        AVQuery<AVObject> query = new AVQuery<AVObject>("GameScore").OrderByDescending("score").Limit(10);
-        query.FindAsync().ContinueWith(t =>
+        var param = new Dictionary<string, object>();
+        param.Add("order", "-score");
+        param.Add("limit", 10);
+        StartCoroutine(_leanCloud.Query("GameScore", param, t =>
         {
-            var results = t.Result;
+            var results = JsonUtility.FromJson<QueryRankResult>(t);
             var scores = new List<KeyValuePair<string, string>>();
 
             //将数据转化为字符串
-            foreach (var result in results)
+            foreach (var result in results.results)
             {
-                scores.Add(new KeyValuePair<string, string>(result["playerName"].ToString(), result["score"].ToString()));
+                scores.Add(
+                    new KeyValuePair<string, string>(result.playerName, result.score.ToString()));
             }
 
-            //由于当前是在子线程，对Unity中的物体操作需要在主线程操作，用以下方法转到主线程
-            MainThreadDispatcher.Send(_ =>
+            Debug.Log(scores.Count);
+            foreach (var score in scores)
             {
-                Debug.Log(scores.Count);
-                foreach (var score in scores)
-                {
-                    var item = Instantiate(RankName);
-                    item.SetActive(true);
-                    item.GetComponent<Text>().text = score.Key;
-                    item.transform.SetParent(RankName.transform.parent);
+                var item = Instantiate(RankName);
+                item.SetActive(true);
+                item.GetComponent<Text>().text = score.Key;
+                item.transform.SetParent(RankName.transform.parent);
 
-                    item = Instantiate(RankScore);
-                    item.SetActive(true);
-                    item.GetComponent<Text>().text = score.Value;
-                    item.transform.SetParent(RankScore.transform.parent);
-                }
-                RankPanel.SetActive(true);
-            }, null);
-        });
+                item = Instantiate(RankScore);
+                item.SetActive(true);
+                item.GetComponent<Text>().text = score.Value;
+                item.transform.SetParent(RankScore.transform.parent);
+            }
+            RankPanel.SetActive(true);
+        }));
     }
 }
