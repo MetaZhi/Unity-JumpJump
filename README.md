@@ -5,6 +5,7 @@ Unity3d开发的微信跳一跳小游戏
 
 Demo
 ===
+**[在线玩 Play Online](https://zhenghongzhi.github.io/Unity-JumpJump/webgldemo/)**  
 ![](https://raw.githubusercontent.com/zhenghongzhi/Unity-JumpJump/master/demo.gif)  
 
 视频教程
