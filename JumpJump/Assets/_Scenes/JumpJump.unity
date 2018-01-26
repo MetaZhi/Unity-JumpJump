@@ -336,8 +336,8 @@ MonoBehaviour:
   RankName: {fileID: 208285618}
   RankScore: {fileID: 1958888984}
   RestartButton: {fileID: 573192566}
-  LeanCloudAppId: z4PgQgJnm8vGnodCwmmbfmn7-gzGzoHsz
-  LeanCloudAppKey: UOGAbDbpbnyBvhKJq8l9xBzh
+  LeanCloudAppId: 8RjJXnShOC4sa0tz9uyEuijJ-gzGzoHsz
+  LeanCloudAppKey: k7p5fY1JRNGc8Toj7G6VF3Ee
 --- !u!1 &203164838
 GameObject:
   m_ObjectHideFlags: 0
