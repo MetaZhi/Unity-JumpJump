@@ -209,6 +209,9 @@ public class Player : MonoBehaviour
 
     private void OnGameOver()
     {
+#if UNITY_WEBGL
+        SceneManager.LoadScene(0);
+#else
         if (_score > 0)
         {
             //本局游戏结束，如果得分大于0，显示上传分数panel
@@ -219,6 +222,7 @@ public class Player : MonoBehaviour
             //否则直接显示排行榜
             ShowRankPanel();
         }
+#endif
     }
 
     /// <summary>
