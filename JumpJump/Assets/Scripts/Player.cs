@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using DG.Tweening;
-using UniRx;
-using UniRx.Toolkit;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -17,7 +15,7 @@ class GameScore
 
 class QueryRankResult
 {
-    public List<GameScore> results;
+    public List<GameScore> results = null;
 }
 
 public class Player : MonoBehaviour
@@ -81,6 +79,7 @@ public class Player : MonoBehaviour
     private float _scoreAnimationStartTime;
     private int _lastReward = 1;
     private LeanCloudRestAPI _leanCloud;
+    private bool _enableInput = true;
 
     // Use this for initialization
     void Start()
@@ -96,44 +95,47 @@ public class Player : MonoBehaviour
         SaveButton.onClick.AddListener(OnClickSaveButton);
         RestartButton.onClick.AddListener(() => { SceneManager.LoadScene(0); });
 
-        MainThreadDispatcher.Initialize();
-
         _leanCloud = new LeanCloudRestAPI(LeanCloudAppId, LeanCloudAppKey);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (_enableInput)
         {
-            _startTime = Time.time;
-            Particle.SetActive(true);
-        }
+            if (Input.GetMouseButtonDown(0))
+            {
+                _startTime = Time.time;
+                Particle.SetActive(true);
+            }
 
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            // 计算总共按下空格的时长
-            var elapse = Time.time - _startTime;
-            OnJump(elapse);
-            Particle.SetActive(false);
+            if (Input.GetMouseButtonUp(0))
+            {
+                // 计算总共按下空格的时长
+                var elapse = Time.time - _startTime;
+                OnJump(elapse);
+                Particle.SetActive(false);
 
-            //还原小人的形状
-            Body.transform.DOScale(0.1f, 0.2f);
-            Head.transform.DOLocalMoveY(0.29f, 0.2f);
+                //还原小人的形状
+                Body.transform.DOScale(0.1f, 0.2f);
+                Head.transform.DOLocalMoveY(0.29f, 0.2f);
 
-            //还原盒子的形状
-            _currentStage.transform.DOLocalMoveY(0.25f, 0.2f);
-            _currentStage.transform.DOScale(new Vector3(1, 0.5f, 1), 0.2f);
-        }
+                //还原盒子的形状
+                _currentStage.transform.DOLocalMoveY(-0.25f, 0.2f);
+                _currentStage.transform.DOScale(new Vector3(1, 0.5f, 1), 0.2f);
 
-        // 处理按下空格时小人和盒子的动画
-        if (Input.GetKey(KeyCode.Space))
-        {
-            Body.transform.localScale += new Vector3(1, -1, 1) * 0.05f * Time.deltaTime;
-            Head.transform.localPosition += new Vector3(0, -1, 0) * 0.1f * Time.deltaTime;
+                _enableInput = false;
+            }
 
-            _currentStage.transform.localScale += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
-            _currentStage.transform.localPosition += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+            // 处理按下空格时小人和盒子的动画
+            if (Input.GetMouseButton(0))
+            {
+                Body.transform.localScale += new Vector3(1, -1, 1) * 0.05f * Time.deltaTime;
+                Head.transform.localPosition += new Vector3(0, -1, 0) * 0.1f * Time.deltaTime;
+
+                _currentStage.transform.localScale += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+                _currentStage.transform.localPosition += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+            }
         }
 
         // 是否显示飘分效果
@@ -166,32 +168,56 @@ public class Player : MonoBehaviour
             new Color(Random.Range(0f, 1), Random.Range(0f, 1), Random.Range(0f, 1));
     }
 
+    void OnCollisionExit(Collision collision)
+    {
+        _enableInput = false;
+    }
+
     /// <summary>
     /// 小人刚体与其他物体发生碰撞时自动调用
     /// </summary>
     void OnCollisionEnter(Collision collision)
     {
-        Debug.Log(collision.gameObject.name);
-        if (collision.gameObject.name.Contains("Stage") && collision.gameObject != _currentStage)
-        {
-            var contacts = collision.contacts;
-            //检测是否是脚在盒子上
-            Debug.Log(contacts[0].normal);
-            if (contacts.Length == 1 && contacts[0].normal == Vector3.up)
-            {
-                _currentStage = collision.gameObject;
-
-                AddScore(collision.contacts);
-                RandomDirection();
-                SpawnStage();
-                MoveCamera();
-                ShowScoreAnimation();
-            }
-        }
-
         if (collision.gameObject.name == "Ground")
         {
             OnGameOver();
+        }
+        else
+        {
+            if (_currentStage != collision.gameObject)
+            {
+                var contacts = collision.contacts;
+
+                //check if player's feet on the stage
+                if (contacts.Length == 1 && Mathf.Abs(contacts[0].point.y) < 0.05f)
+                {
+                    _currentStage = collision.gameObject;
+                    AddScore(contacts);
+                    RandomDirection();
+                    SpawnStage();
+                    MoveCamera();
+
+                    _enableInput = true;
+                }
+                else // body collides with the box
+                {
+                    OnGameOver();
+                }
+            }
+            else //still on the same box
+            {
+                var contacts = collision.contacts;
+
+                //check if player's feet on the stage
+                if (contacts.Length == 1 && Mathf.Abs(contacts[0].point.y) < 0.05f)
+                {
+                    _enableInput = true;
+                }
+                else // body just collides with this box
+                {
+                    OnGameOver();
+                }
+            }
         }
     }
 
@@ -210,17 +236,14 @@ public class Player : MonoBehaviour
             stagePos.y = 0;
 
             var precision = Vector3.Distance(hitPoint, stagePos);
-            Debug.Log(precision);
             if (precision < 0.1)
-            {
                 _lastReward *= 2;
-            }
             else
-            {
                 _lastReward = 1;
-            }
+
             _score += _lastReward;
             TotalScoreText.text = _score.ToString();
+            ShowScoreAnimation();
         }
     }
 
@@ -307,7 +330,6 @@ public class Player : MonoBehaviour
     /// </summary>
     void ShowRankPanel()
     {
-        Debug.Log("ShowRankPanel");
         //获取GameScore数据对象，降序排列取前10个数据
         var param = new Dictionary<string, object>();
         param.Add("order", "-score");
@@ -324,7 +346,6 @@ public class Player : MonoBehaviour
                     new KeyValuePair<string, string>(result.playerName, result.score.ToString()));
             }
 
-            Debug.Log(scores.Count);
             foreach (var score in scores)
             {
                 var item = Instantiate(RankName);

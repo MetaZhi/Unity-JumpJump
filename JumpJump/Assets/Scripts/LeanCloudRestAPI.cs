@@ -44,7 +44,6 @@ public class LeanCloudRestAPI
             }
             else
             {
-                Debug.Log(www.downloadHandler.text);
                 calback();
             }
         }
@@ -73,7 +72,6 @@ public class LeanCloudRestAPI
             }
             else
             {
-                Debug.Log(www.downloadHandler.text);
                 calback(www.downloadHandler.text);
             }
         }
