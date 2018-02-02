@@ -122,7 +122,7 @@ public class Player : MonoBehaviour
 
                 //还原盒子的形状
                 _currentStage.transform.DOLocalMoveY(-0.25f, 0.2f);
-                _currentStage.transform.DOScale(new Vector3(1, 0.5f, 1), 0.2f);
+                _currentStage.transform.DOScaleY(0.5f, 0.2f);
 
                 _enableInput = false;
             }
