@@ -149,7 +149,8 @@ public class Player : MonoBehaviour
     /// <param name="elapse"></param>
     void OnJump(float elapse)
     {
-        _rigidbody.AddForce((new Vector3(0, 1.5f, 0) + _direction) * elapse * Factor, ForceMode.Impulse);
+        _rigidbody.AddForce(new Vector3(0, 5f, 0) + (_direction) * elapse * Factor, ForceMode.Impulse);
+        transform.DOLocalRotate(new Vector3(0, 0, -360), 0.6f, RotateMode.LocalAxisAdd);
     }
 
     /// <summary>
@@ -189,7 +190,7 @@ public class Player : MonoBehaviour
                 var contacts = collision.contacts;
 
                 //check if player's feet on the stage
-                if (contacts.Length == 1 && Mathf.Abs(contacts[0].point.y) < 0.05f)
+                if (contacts.Length == 1 && contacts[0].normal == Vector3.up)
                 {
                     _currentStage = collision.gameObject;
                     AddScore(contacts);
@@ -209,7 +210,7 @@ public class Player : MonoBehaviour
                 var contacts = collision.contacts;
 
                 //check if player's feet on the stage
-                if (contacts.Length == 1 && Mathf.Abs(contacts[0].point.y) < 0.05f)
+                if (contacts.Length == 1 && contacts[0].normal == Vector3.up)
                 {
                     _enableInput = true;
                 }
@@ -295,6 +296,7 @@ public class Player : MonoBehaviour
     {
         var seed = Random.Range(0, 2);
         _direction = seed == 0 ? new Vector3(1, 0, 0) : new Vector3(0, 0, 1);
+        transform.right = _direction;
     }
 
     /// <summary>
@@ -358,6 +360,7 @@ public class Player : MonoBehaviour
                 item.GetComponent<Text>().text = score.Value;
                 item.transform.SetParent(RankScore.transform.parent);
             }
+
             RankPanel.SetActive(true);
         }));
     }
