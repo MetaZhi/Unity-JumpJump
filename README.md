@@ -10,7 +10,7 @@ Demo
 
 视频教程
 ===
-https://edu.csdn.net/course/detail/6975
+https://ke.qq.com/course/281184
 
 更新日志
 ===
