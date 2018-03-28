@@ -10,7 +10,7 @@ Demo
 
 视频教程
 ===
-https://ke.qq.com/course/281184
+https://ke.qq.com/course/281184?flowToken=1000243
 
 更新日志
 ===
