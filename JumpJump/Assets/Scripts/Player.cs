@@ -130,11 +130,15 @@ public class Player : MonoBehaviour
             // 处理按下空格时小人和盒子的动画
             if (Input.GetMouseButton(0))
             {
-                Body.transform.localScale += new Vector3(1, -1, 1) * 0.05f * Time.deltaTime;
-                Head.transform.localPosition += new Vector3(0, -1, 0) * 0.1f * Time.deltaTime;
+                //添加限定，盒子最多缩放一半
+                if (_currentStage.transform.localScale.y > 0.3)
+                {
+                    Body.transform.localScale += new Vector3(1, -1, 1) * 0.05f * Time.deltaTime;
+                    Head.transform.localPosition += new Vector3(0, -1, 0) * 0.1f * Time.deltaTime;
 
-                _currentStage.transform.localScale += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
-                _currentStage.transform.localPosition += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+                    _currentStage.transform.localScale += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+                    _currentStage.transform.localPosition += new Vector3(0, -1, 0) * 0.15f * Time.deltaTime;
+                }
             }
         }
 
