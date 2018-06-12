@@ -29,6 +29,9 @@ public class Player : MonoBehaviour
     // 第一个盒子物体
     public GameObject Stage;
 
+    // 盒子仓库，可以放上各种盒子的prefab，用于动态生成。
+    public GameObject[] BoxTemplates;
+
     // 左上角总分的UI组件
     public Text TotalScoreText;
 
@@ -162,7 +165,18 @@ public class Player : MonoBehaviour
     /// </summary>
     void SpawnStage()
     {
-        var stage = Instantiate(Stage);
+        GameObject prefab;
+        if (BoxTemplates.Length > 0)
+        {
+            // 从盒子库中随机取盒子进行动态生成
+            prefab = BoxTemplates[Random.Range(0, BoxTemplates.Length)];
+        }
+        else
+        {
+            prefab = Stage;
+        }
+
+        var stage = Instantiate(prefab);
         stage.transform.position = _currentStage.transform.position + _direction * Random.Range(1.1f, MaxDistance);
 
         var randomScale = Random.Range(0.5f, 1);
@@ -183,6 +197,7 @@ public class Player : MonoBehaviour
     /// </summary>
     void OnCollisionEnter(Collision collision)
     {
+        Debug.Log(collision.gameObject.name);
         if (collision.gameObject.name == "Ground")
         {
             OnGameOver();
